@@ -2,219 +2,283 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>Azota Mini</title>
+<title>Blog Ultimate Pro</title>
 
 <style>
 body {
-  font-family: Arial;
-  background: white;
-  color: black;
+  margin: 0;
+  font-family: "Segoe UI";
+  background: #f4f6f9;
+  transition: 0.3s;
+}
+
+.dark {
+  background: #1e1e1e;
+  color: white;
+}
+
+header {
+  background: linear-gradient(90deg,#4facfe,#00f2fe);
   padding: 20px;
+  text-align: center;
+  color: white;
+  font-size: 26px;
 }
 
-/* CREATE */
-.question {
-  border: 2px solid black;
-  padding: 10px;
-  margin-bottom: 15px;
+.container {
+  display: flex;
+  max-width: 1200px;
+  margin: 20px auto;
 }
 
-input[type="text"] {
+.sidebar {
+  width: 250px;
+  background: white;
+  padding: 15px;
+  border-radius: 10px;
+  margin-right: 20px;
+}
+
+.dark .sidebar { background:#2c2c2c; }
+
+.main { flex: 1; }
+
+.post {
+  background: white;
+  margin-bottom: 20px;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.dark .post { background:#2c2c2c; }
+
+.post:hover { transform: translateY(-5px); }
+
+.post img {
   width: 100%;
-  margin: 5px 0;
-  padding: 5px;
+  height: 200px;
+  object-fit: cover;
 }
+
+.post-content { padding: 15px; }
+
+.post-title { font-size: 20px; font-weight: bold; }
+
+#viewer {
+  display: none;
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+}
+
+.dark #viewer { background:#2c2c2c; }
+
+iframe { width:100%; height:300px; }
 
 button {
-  padding: 10px;
-  margin: 5px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 5px;
+  background: #4facfe;
+  color: white;
   cursor: pointer;
 }
 
-/* RESULT */
-#result {
-  position: fixed;
-  top: 0;
-  left: 0;
+input, textarea {
   width: 100%;
-  height: 100%;
+  padding: 8px;
+  margin: 5px 0;
 }
 
-#score {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 100px;
-  font-weight: bold;
+.comment {
+  border-bottom: 1px solid #ccc;
+  padding: 5px;
 }
 
-#fireworks {
-  position: absolute;
-  top: 0;
-  left: 0;
+#adminPanel {
+  display: none;
+  background: white;
+  padding: 15px;
+  margin-top: 20px;
+  border-radius: 10px;
 }
 </style>
-
 </head>
 
 <body>
 
-<!-- TẠO ĐỀ -->
-<div id="creator">
-  <h2>Tạo đề</h2>
-  <div id="questions"></div>
-  <button onclick="addQuestion()">+ Thêm câu hỏi</button>
-  <button onclick="createExam()">Tạo bài</button>
+<header>🚀 Blog Ultimate</header>
+
+<div class="container">
+
+<div class="sidebar">
+  <button onclick="toggleDark()">🌙 Dark</button><br><br>
+  <button onclick="toggleAdmin()">🔐 Admin</button><br><br>
+  <input placeholder="🔍 Tìm kiếm..." oninput="searchPost(this.value)">
+  <p id="stats"></p>
 </div>
 
-<!-- LÀM BÀI -->
-<div id="exam" style="display:none;">
-  <h2>Làm bài</h2>
-  <div id="examContent"></div>
-  <button onclick="submitExam()">Nộp bài</button>
+<div class="main">
+
+<div id="posts"></div>
+
+<div id="viewer">
+  <button onclick="back()">⬅ Quay lại</button>
+  <h2 id="title"></h2>
+  <p id="date"></p>
+  <p id="content"></p>
+  <div id="video"></div>
+
+  <p>❤️ <span id="likeCount"></span></p>
+  <button onclick="likePost()">Like</button>
+
+  <h3>Bình luận</h3>
+  <div id="comments"></div>
+  <input id="commentInput">
+  <button onclick="addComment()">Gửi</button>
 </div>
 
-<!-- KẾT QUẢ -->
-<div id="result" style="display:none;">
-  <div id="score"></div>
-  <canvas id="fireworks"></canvas>
+<div id="adminPanel">
+  <h3>Thêm bài</h3>
+  <input id="titleInput" placeholder="Tiêu đề">
+  <textarea id="contentInput"></textarea>
+  <input id="imgInput" placeholder="Link ảnh">
+  <input id="videoInput" placeholder="YouTube">
+  <button onclick="addPost()">Đăng</button>
+
+  <h3>Quản lý</h3>
+  <div id="adminList"></div>
+</div>
+
+</div>
 </div>
 
 <script>
-let questions = [];
+let posts = JSON.parse(localStorage.getItem("posts")) || [];
+let current = 0;
 
-// THÊM CÂU HỎI
-function addQuestion() {
-  const index = questions.length;
-
-  const div = document.createElement("div");
-  div.className = "question";
-
-  div.innerHTML = `
-    <input placeholder="Câu hỏi" onchange="update(${index}, 'q', this.value)">
-    <input placeholder="Đáp án A" onchange="update(${index}, 'A', this.value)">
-    <input placeholder="Đáp án B" onchange="update(${index}, 'B', this.value)">
-    <input placeholder="Đáp án C" onchange="update(${index}, 'C', this.value)">
-    <input placeholder="Đáp án D" onchange="update(${index}, 'D', this.value)">
-    
-    Đáp án đúng:
-    <label><input type="radio" name="correct${index}" onclick="update(${index}, 'correct', 'A')">A</label>
-    <label><input type="radio" name="correct${index}" onclick="update(${index}, 'correct', 'B')">B</label>
-    <label><input type="radio" name="correct${index}" onclick="update(${index}, 'correct', 'C')">C</label>
-    <label><input type="radio" name="correct${index}" onclick="update(${index}, 'correct', 'D')">D</label>
-  `;
-
-  document.getElementById("questions").appendChild(div);
-
-  questions.push({ q:"", A:"", B:"", C:"", D:"", correct:"" });
-}
-
-// UPDATE DATA
-function update(i, key, value) {
-  questions[i][key] = value;
-}
-
-// TẠO BÀI
-function createExam() {
-  localStorage.setItem("examData", JSON.stringify(questions));
-  location.reload();
-}
-
-// LOAD
-window.onload = function() {
-  const data = localStorage.getItem("examData");
-  if (data) {
-    questions = JSON.parse(data);
-    startExam();
-  }
-};
-
-// BẮT ĐẦU LÀM BÀI
-function startExam() {
-  document.getElementById("creator").style.display = "none";
-  document.getElementById("exam").style.display = "block";
-
-  let html = "";
-
-  questions.forEach((q, i) => {
-    html += `
-      <div class="question">
-        <b>${i+1}. ${q.q}</b><br>
-        <label><input type="radio" name="q${i}" value="A"> ${q.A}</label><br>
-        <label><input type="radio" name="q${i}" value="B"> ${q.B}</label><br>
-        <label><input type="radio" name="q${i}" value="C"> ${q.C}</label><br>
-        <label><input type="radio" name="q${i}" value="D"> ${q.D}</label><br>
+// RENDER
+function render(list = posts){
+  postsDiv.innerHTML="";
+  list.forEach((p,i)=>{
+    postsDiv.innerHTML += `
+      <div class="post" onclick="view(${i})">
+        <img src="${p.img || 'https://via.placeholder.com/800'}">
+        <div class="post-content">
+          <div class="post-title">${p.title}</div>
+          <small>${p.date || ""}</small>
+        </div>
       </div>
     `;
   });
 
-  document.getElementById("examContent").innerHTML = html;
+  stats.innerText="Bài viết: "+posts.length;
+  renderAdmin();
 }
 
-// NỘP BÀI
-function submitExam() {
-  let score = 0;
+// VIEW
+function view(i){
+  current=i;
+  postsDiv.style.display="none";
+  viewer.style.display="block";
 
-  questions.forEach((q, i) => {
-    const selected = document.querySelector(`input[name="q${i}"]:checked`);
-    if (selected && selected.value === q.correct) {
-      score += 0.25;
-    }
+  let p=posts[i];
+  title.innerText=p.title;
+  content.innerText=p.content;
+  date.innerText=p.date;
+  likeCount.innerText=p.likes||0;
+
+  renderComments();
+
+  if(p.video){
+    let id=p.video.split("v=")[1];
+    video.innerHTML=`<iframe src="https://youtube.com/embed/${id}"></iframe>`;
+  }
+}
+
+// BACK
+function back(){
+  postsDiv.style.display="block";
+  viewer.style.display="none";
+}
+
+// ADD
+function addPost(){
+  posts.push({
+    title:titleInput.value,
+    content:contentInput.value,
+    img:imgInput.value,
+    video:videoInput.value,
+    date:new Date().toLocaleDateString(),
+    likes:0,
+    comments:[]
   });
 
-  localStorage.removeItem("examData");
-
-  document.getElementById("exam").style.display = "none";
-  document.getElementById("result").style.display = "block";
-  document.getElementById("score").innerText = score;
-
-  startFireworks();
+  localStorage.setItem("posts",JSON.stringify(posts));
+  render();
 }
 
-// FIREWORKS LOOP 2s
-function startFireworks() {
-  const canvas = document.getElementById("fireworks");
-  const ctx = canvas.getContext("2d");
-
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-
-  let particles = [];
-
-  function createFirework() {
-    for (let i = 0; i < 120; i++) {
-      particles.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 8,
-        vy: (Math.random() - 0.5) * 8,
-        life: 100
-      });
-    }
-  }
-
-  function animate() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    particles.forEach(p => {
-      p.x += p.vx;
-      p.y += p.vy;
-      p.life--;
-
-      ctx.fillRect(p.x, p.y, 3, 3);
-    });
-
-    particles = particles.filter(p => p.life > 0);
-
-    requestAnimationFrame(animate);
-  }
-
-  setInterval(createFirework, 2000);
-
-  animate();
+// DELETE
+function deletePost(i){
+  posts.splice(i,1);
+  localStorage.setItem("posts",JSON.stringify(posts));
+  render();
 }
+
+// ADMIN LIST
+function renderAdmin(){
+  adminList.innerHTML="";
+  posts.forEach((p,i)=>{
+    adminList.innerHTML += `${p.title} <button onclick="deletePost(${i})">Xóa</button><br>`;
+  });
+}
+
+// SEARCH
+function searchPost(k){
+  let r=posts.filter(p=>p.title.toLowerCase().includes(k.toLowerCase()));
+  render(r);
+}
+
+// LIKE
+function likePost(){
+  posts[current].likes++;
+  localStorage.setItem("posts",JSON.stringify(posts));
+  view(current);
+}
+
+// COMMENT
+function addComment(){
+  if(!commentInput.value) return;
+  posts[current].comments.push(commentInput.value);
+  commentInput.value="";
+  localStorage.setItem("posts",JSON.stringify(posts));
+  renderComments();
+}
+
+function renderComments(){
+  comments.innerHTML="";
+  posts[current].comments.forEach(c=>{
+    comments.innerHTML+=`<div class="comment">${c}</div>`;
+  });
+}
+
+// DARK
+function toggleDark(){
+  document.body.classList.toggle("dark");
+}
+
+// ADMIN
+function toggleAdmin(){
+  let pass=prompt("Pass:");
+  if(pass==="123") adminPanel.style.display="block";
+}
+
+// INIT
+const postsDiv=document.getElementById("posts");
+render();
 </script>
 
 </body>
-</html>
+  </html>

@@ -193,9 +193,14 @@ function view(i){
   renderComments();
 
   if(p.video){
-    let id=p.video.split("v=")[1];
-    video.innerHTML=`<iframe src="https://youtube.com/embed/${id}"></iframe>`;
-  }
+  video.innerHTML = `
+    <video controls width="100%" style="border-radius:10px;">
+      <source src="${p.video}" type="video/mp4">
+      Trình duyệt không hỗ trợ video.
+    </video>
+  `;
+} else {
+  video.innerHTML = "";
 }
 
 // BACK

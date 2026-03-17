@@ -2,193 +2,119 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>Thi Trắc Nghiệm AI</title>
-
+<title>Azota Mini</title>
 <style>
 body {
   font-family: Arial;
-  background: #0f2027;
-  color: white;
-  text-align: center;
-}
-
-.container {
-  max-width: 700px;
-  margin: auto;
+  background: white;
+  color: black;
   padding: 20px;
 }
 
-.question {
-  text-align: left;
-  background: rgba(255,255,255,0.1);
-  padding: 15px;
-  border-radius: 10px;
-  margin-top: 15px;
+button {
+  padding: 10px;
+  margin: 5px;
+  cursor: pointer;
 }
 
-textarea {
+.question {
+  border: 2px solid black;
+  padding: 10px;
+  margin-bottom: 15px;
+}
+
+input[type="text"] {
   width: 100%;
   margin: 5px 0;
-}
-
-.option {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-button {
-  padding: 10px 20px;
-  margin: 10px;
-  border-radius: 8px;
-  border: none;
-  background: #00c6ff;
-  cursor: pointer;
+  padding: 5px;
 }
 </style>
 </head>
 
 <body>
 
-<div class="container">
-
-<!-- 🔹 TẠO ĐỀ -->
-<div id="editor">
-
-<h2>📸 Tạo đề (API)</h2>
-
-<input type="file" id="imageInput">
-<br>
-<button onclick="processImage()">Nhận diện</button>
-
-<p id="status"></p>
-
-<div id="output"></div>
-
-<button onclick="createExam()">🚀 Tạo bài</button>
-
+<div id="creator">
+  <h2>Tạo đề</h2>
+  <div id="questions"></div>
+  <button onclick="addQuestion()">+ Thêm câu hỏi</button>
+  <button onclick="createExam()">Tạo bài</button>
 </div>
 
-<!-- 🔹 LÀM BÀI -->
-<div id="exam" style="display:none">
-
-<h2>📝 Làm bài</h2>
-
-<div id="examContent"></div>
-
-<button onclick="submitExam()">Nộp bài</button>
-
-<h3 id="score"></h3>
-
+<div id="exam" style="display:none;">
+  <h2>Làm bài</h2>
+  <div id="examContent"></div>
+  <button onclick="submitExam()">Nộp bài</button>
 </div>
 
+<div id="result" style="display:none; text-align:center;">
+  <h1 id="score"></h1>
+  <canvas id="fireworks"></canvas>
 </div>
 
 <script>
 let questions = [];
 
-async function processImage() {
-  const file = document.getElementById("imageInput").files[0];
-  if (!file) return alert("Chọn ảnh trước");
+function addQuestion() {
+  const index = questions.length;
 
-  document.getElementById("status").innerText = "⏳ Đang xử lý...";
+  const div = document.createElement("div");
+  div.className = "question";
 
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("apikey", "helloworld"); // API FREE
-  formData.append("language", "vie"); // đổi 'vie' nếu tiếng Việt
+  div.innerHTML = `
+    <input placeholder="Câu hỏi" onchange="update(${index}, 'q', this.value)">
+    <input placeholder="Đáp án A" onchange="update(${index}, 'A', this.value)">
+    <input placeholder="Đáp án B" onchange="update(${index}, 'B', this.value)">
+    <input placeholder="Đáp án C" onchange="update(${index}, 'C', this.value)">
+    <input placeholder="Đáp án D" onchange="update(${index}, 'D', this.value)">
+    
+    Đáp án đúng:
+    <label><input type="radio" name="correct${index}" onclick="update(${index}, 'correct', 'A')">A</label>
+    <label><input type="radio" name="correct${index}" onclick="update(${index}, 'correct', 'B')">B</label>
+    <label><input type="radio" name="correct${index}" onclick="update(${index}, 'correct', 'C')">C</label>
+    <label><input type="radio" name="correct${index}" onclick="update(${index}, 'correct', 'D')">D</label>
+  `;
 
-  try {
-    const res = await fetch("https://api.ocr.space/parse/image", {
-      method: "POST",
-      body: formData
-    });
+  document.getElementById("questions").appendChild(div);
 
-    const data = await res.json();
-
-    if (!data.ParsedResults) {
-      document.getElementById("status").innerText = "❌ Lỗi OCR";
-      return;
-    }
-
-    const text = data.ParsedResults[0].ParsedText;
-
-    document.getElementById("status").innerText = "✅ Nhận diện xong";
-
-    generateEditor(text);
-
-  } catch (err) {
-    document.getElementById("status").innerText = "❌ Lỗi mạng/API";
-  }
+  questions.push({ q:"", A:"", B:"", C:"", D:"", correct:"" });
 }
 
-function generateEditor(text) {
-  const lines = text.split("\n").filter(l => l.trim() !== "");
-  let html = "";
-  questions = [];
-
-  let qIndex = 0;
-
-  for (let i = 0; i < lines.length; i += 5) {
-
-    questions.push({
-      q: lines[i] || "",
-      A: lines[i+1] || "",
-      B: lines[i+2] || "",
-      C: lines[i+3] || "",
-      D: lines[i+4] || "",
-      correct: ""
-    });
-
-    html += `
-    <div class="question">
-      <textarea onchange="updateQ(${qIndex}, 'q', this.value)">${lines[i] || ""}</textarea>
-
-      A: <textarea onchange="updateQ(${qIndex}, 'A', this.value)">${lines[i+1] || ""}</textarea>
-      B: <textarea onchange="updateQ(${qIndex}, 'B', this.value)">${lines[i+2] || ""}</textarea>
-      C: <textarea onchange="updateQ(${qIndex}, 'C', this.value)">${lines[i+3] || ""}</textarea>
-      D: <textarea onchange="updateQ(${qIndex}, 'D', this.value)">${lines[i+4] || ""}</textarea>
-
-      Đáp án đúng:
-      <select onchange="updateQ(${qIndex}, 'correct', this.value)">
-        <option value="">--Chọn--</option>
-        <option>A</option>
-        <option>B</option>
-        <option>C</option>
-        <option>D</option>
-      </select>
-    </div>
-    `;
-    qIndex++;
-  }
-
-  document.getElementById("output").innerHTML = html;
-}
-
-function updateQ(index, key, value) {
-  questions[index][key] = value;
+function update(i, key, value) {
+  questions[i][key] = value;
 }
 
 function createExam() {
+  localStorage.setItem("examData", JSON.stringify(questions));
+  location.reload();
+}
+
+window.onload = function() {
+  const data = localStorage.getItem("examData");
+  if (data) {
+    questions = JSON.parse(data);
+    startExam();
+  }
+};
+
+function startExam() {
+  document.getElementById("creator").style.display = "none";
+  document.getElementById("exam").style.display = "block";
+
   let html = "";
 
   questions.forEach((q, i) => {
     html += `
-    <div class="question">
-      <b>${i+1}. ${q.q}</b><br>
-
-      <label><input type="radio" name="q${i}" value="A"> ${q.A}</label><br>
-      <label><input type="radio" name="q${i}" value="B"> ${q.B}</label><br>
-      <label><input type="radio" name="q${i}" value="C"> ${q.C}</label><br>
-      <label><input type="radio" name="q${i}" value="D"> ${q.D}</label>
-    </div>
+      <div class="question">
+        <b>${i+1}. ${q.q}</b><br>
+        <label><input type="radio" name="q${i}" value="A"> ${q.A}</label><br>
+        <label><input type="radio" name="q${i}" value="B"> ${q.B}</label><br>
+        <label><input type="radio" name="q${i}" value="C"> ${q.C}</label><br>
+        <label><input type="radio" name="q${i}" value="D"> ${q.D}</label><br>
+      </div>
     `;
   });
 
   document.getElementById("examContent").innerHTML = html;
-
-  document.getElementById("editor").style.display = "none";
-  document.getElementById("exam").style.display = "block";
 }
 
 function submitExam() {
@@ -201,7 +127,54 @@ function submitExam() {
     }
   });
 
+  localStorage.removeItem("examData");
+
+  document.getElementById("exam").style.display = "none";
+  document.getElementById("result").style.display = "block";
   document.getElementById("score").innerText = "🎯 Điểm: " + score;
+
+  startFireworks();
+}
+
+function startFireworks() {
+  const canvas = document.getElementById("fireworks");
+  const ctx = canvas.getContext("2d");
+
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  let particles = [];
+
+  function createFirework() {
+    for (let i = 0; i < 100; i++) {
+      particles.push({
+        x: canvas.width/2,
+        y: canvas.height/2,
+        vx: (Math.random() - 0.5) * 10,
+        vy: (Math.random() - 0.5) * 10,
+        life: 100
+      });
+    }
+  }
+
+  function animate() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    particles.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life--;
+
+      ctx.fillRect(p.x, p.y, 3, 3);
+    });
+
+    particles = particles.filter(p => p.life > 0);
+
+    requestAnimationFrame(animate);
+  }
+
+  createFirework();
+  animate();
 }
 </script>
 

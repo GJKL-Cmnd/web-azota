@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <title>Thi Trắc Nghiệm AI</title>
 
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
-
 <style>
 body {
   font-family: Arial;
@@ -54,14 +52,16 @@ button {
 
 <div class="container">
 
-<!-- 🔹 TRANG TẠO ĐỀ -->
+<!-- 🔹 TẠO ĐỀ -->
 <div id="editor">
 
-<h2>📸 Tạo đề</h2>
+<h2>📸 Tạo đề (API)</h2>
 
 <input type="file" id="imageInput">
 <br>
 <button onclick="processImage()">Nhận diện</button>
+
+<p id="status"></p>
 
 <div id="output"></div>
 
@@ -69,7 +69,7 @@ button {
 
 </div>
 
-<!-- 🔹 TRANG LÀM BÀI -->
+<!-- 🔹 LÀM BÀI -->
 <div id="exam" style="display:none">
 
 <h2>📝 Làm bài</h2>
@@ -89,8 +89,37 @@ let questions = [];
 
 async function processImage() {
   const file = document.getElementById("imageInput").files[0];
-  const result = await Tesseract.recognize(file, 'eng');
-  generateEditor(result.data.text);
+  if (!file) return alert("Chọn ảnh trước");
+
+  document.getElementById("status").innerText = "⏳ Đang xử lý...";
+
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("apikey", "helloworld"); // API FREE
+  formData.append("language", "vie"); // đổi 'vie' nếu tiếng Việt
+
+  try {
+    const res = await fetch("https://api.ocr.space/parse/image", {
+      method: "POST",
+      body: formData
+    });
+
+    const data = await res.json();
+
+    if (!data.ParsedResults) {
+      document.getElementById("status").innerText = "❌ Lỗi OCR";
+      return;
+    }
+
+    const text = data.ParsedResults[0].ParsedText;
+
+    document.getElementById("status").innerText = "✅ Nhận diện xong";
+
+    generateEditor(text);
+
+  } catch (err) {
+    document.getElementById("status").innerText = "❌ Lỗi mạng/API";
+  }
 }
 
 function generateEditor(text) {

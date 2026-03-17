@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Azota Mini</title>
+
 <style>
 body {
   font-family: Arial;
@@ -11,12 +12,7 @@ body {
   padding: 20px;
 }
 
-button {
-  padding: 10px;
-  margin: 5px;
-  cursor: pointer;
-}
-
+/* CREATE */
 .question {
   border: 2px solid black;
   padding: 10px;
@@ -28,11 +24,43 @@ input[type="text"] {
   margin: 5px 0;
   padding: 5px;
 }
+
+button {
+  padding: 10px;
+  margin: 5px;
+  cursor: pointer;
+}
+
+/* RESULT */
+#result {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+#score {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 100px;
+  font-weight: bold;
+}
+
+#fireworks {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
 </style>
+
 </head>
 
 <body>
 
+<!-- TẠO ĐỀ -->
 <div id="creator">
   <h2>Tạo đề</h2>
   <div id="questions"></div>
@@ -40,20 +68,23 @@ input[type="text"] {
   <button onclick="createExam()">Tạo bài</button>
 </div>
 
+<!-- LÀM BÀI -->
 <div id="exam" style="display:none;">
   <h2>Làm bài</h2>
   <div id="examContent"></div>
   <button onclick="submitExam()">Nộp bài</button>
 </div>
 
-<div id="result" style="display:none; text-align:center;">
-  <h1 id="score"></h1>
+<!-- KẾT QUẢ -->
+<div id="result" style="display:none;">
+  <div id="score"></div>
   <canvas id="fireworks"></canvas>
 </div>
 
 <script>
 let questions = [];
 
+// THÊM CÂU HỎI
 function addQuestion() {
   const index = questions.length;
 
@@ -79,15 +110,18 @@ function addQuestion() {
   questions.push({ q:"", A:"", B:"", C:"", D:"", correct:"" });
 }
 
+// UPDATE DATA
 function update(i, key, value) {
   questions[i][key] = value;
 }
 
+// TẠO BÀI
 function createExam() {
   localStorage.setItem("examData", JSON.stringify(questions));
   location.reload();
 }
 
+// LOAD
 window.onload = function() {
   const data = localStorage.getItem("examData");
   if (data) {
@@ -96,6 +130,7 @@ window.onload = function() {
   }
 };
 
+// BẮT ĐẦU LÀM BÀI
 function startExam() {
   document.getElementById("creator").style.display = "none";
   document.getElementById("exam").style.display = "block";
@@ -117,6 +152,7 @@ function startExam() {
   document.getElementById("examContent").innerHTML = html;
 }
 
+// NỘP BÀI
 function submitExam() {
   let score = 0;
 
@@ -131,11 +167,12 @@ function submitExam() {
 
   document.getElementById("exam").style.display = "none";
   document.getElementById("result").style.display = "block";
-  document.getElementById("score").innerText = "🎯 Điểm: " + score;
+  document.getElementById("score").innerText = score;
 
   startFireworks();
 }
 
+// FIREWORKS LOOP 2s
 function startFireworks() {
   const canvas = document.getElementById("fireworks");
   const ctx = canvas.getContext("2d");
@@ -146,19 +183,19 @@ function startFireworks() {
   let particles = [];
 
   function createFirework() {
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 120; i++) {
       particles.push({
-        x: canvas.width/2,
-        y: canvas.height/2,
-        vx: (Math.random() - 0.5) * 10,
-        vy: (Math.random() - 0.5) * 10,
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        vx: (Math.random() - 0.5) * 8,
+        vy: (Math.random() - 0.5) * 8,
         life: 100
       });
     }
   }
 
   function animate() {
-    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     particles.forEach(p => {
       p.x += p.vx;
@@ -173,7 +210,8 @@ function startFireworks() {
     requestAnimationFrame(animate);
   }
 
-  createFirework();
+  setInterval(createFirework, 2000);
+
   animate();
 }
 </script>

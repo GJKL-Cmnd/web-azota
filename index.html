@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Thi Trắc Nghiệm AI</title>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+
+<style>
+body {
+  font-family: Arial;
+  background: #0f2027;
+  color: white;
+  text-align: center;
+}
+
+.container {
+  max-width: 700px;
+  margin: auto;
+  padding: 20px;
+}
+
+.question {
+  text-align: left;
+  background: rgba(255,255,255,0.1);
+  padding: 15px;
+  border-radius: 10px;
+  margin-top: 15px;
+}
+
+textarea {
+  width: 100%;
+  margin: 5px 0;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+button {
+  padding: 10px 20px;
+  margin: 10px;
+  border-radius: 8px;
+  border: none;
+  background: #00c6ff;
+  cursor: pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<!-- 🔹 TRANG TẠO ĐỀ -->
+<div id="editor">
+
+<h2>📸 Tạo đề</h2>
+
+<input type="file" id="imageInput">
+<br>
+<button onclick="processImage()">Nhận diện</button>
+
+<div id="output"></div>
+
+<button onclick="createExam()">🚀 Tạo bài</button>
+
+</div>
+
+<!-- 🔹 TRANG LÀM BÀI -->
+<div id="exam" style="display:none">
+
+<h2>📝 Làm bài</h2>
+
+<div id="examContent"></div>
+
+<button onclick="submitExam()">Nộp bài</button>
+
+<h3 id="score"></h3>
+
+</div>
+
+</div>
+
+<script>
+let questions = [];
+
+async function processImage() {
+  const file = document.getElementById("imageInput").files[0];
+  const result = await Tesseract.recognize(file, 'eng');
+  generateEditor(result.data.text);
+}
+
+function generateEditor(text) {
+  const lines = text.split("\n").filter(l => l.trim() !== "");
+  let html = "";
+  questions = [];
+
+  let qIndex = 0;
+
+  for (let i = 0; i < lines.length; i += 5) {
+
+    questions.push({
+      q: lines[i] || "",
+      A: lines[i+1] || "",
+      B: lines[i+2] || "",
+      C: lines[i+3] || "",
+      D: lines[i+4] || "",
+      correct: ""
+    });
+
+    html += `
+    <div class="question">
+      <textarea onchange="updateQ(${qIndex}, 'q', this.value)">${lines[i] || ""}</textarea>
+
+      A: <textarea onchange="updateQ(${qIndex}, 'A', this.value)">${lines[i+1] || ""}</textarea>
+      B: <textarea onchange="updateQ(${qIndex}, 'B', this.value)">${lines[i+2] || ""}</textarea>
+      C: <textarea onchange="updateQ(${qIndex}, 'C', this.value)">${lines[i+3] || ""}</textarea>
+      D: <textarea onchange="updateQ(${qIndex}, 'D', this.value)">${lines[i+4] || ""}</textarea>
+
+      Đáp án đúng:
+      <select onchange="updateQ(${qIndex}, 'correct', this.value)">
+        <option value="">--Chọn--</option>
+        <option>A</option>
+        <option>B</option>
+        <option>C</option>
+        <option>D</option>
+      </select>
+    </div>
+    `;
+    qIndex++;
+  }
+
+  document.getElementById("output").innerHTML = html;
+}
+
+function updateQ(index, key, value) {
+  questions[index][key] = value;
+}
+
+function createExam() {
+  let html = "";
+
+  questions.forEach((q, i) => {
+    html += `
+    <div class="question">
+      <b>${i+1}. ${q.q}</b><br>
+
+      <label><input type="radio" name="q${i}" value="A"> ${q.A}</label><br>
+      <label><input type="radio" name="q${i}" value="B"> ${q.B}</label><br>
+      <label><input type="radio" name="q${i}" value="C"> ${q.C}</label><br>
+      <label><input type="radio" name="q${i}" value="D"> ${q.D}</label>
+    </div>
+    `;
+  });
+
+  document.getElementById("examContent").innerHTML = html;
+
+  document.getElementById("editor").style.display = "none";
+  document.getElementById("exam").style.display = "block";
+}
+
+function submitExam() {
+  let score = 0;
+
+  questions.forEach((q, i) => {
+    const selected = document.querySelector(`input[name="q${i}"]:checked`);
+    if (selected && selected.value === q.correct) {
+      score += 0.25;
+    }
+  });
+
+  document.getElementById("score").innerText = "🎯 Điểm: " + score;
+}
+</script>
+
+</body>
+</html>

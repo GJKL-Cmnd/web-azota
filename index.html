@@ -2,288 +2,227 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>Blog Ultimate Pro</title>
+<title>Run Earn</title>
 
 <style>
 body {
-  margin: 0;
-  font-family: "Segoe UI";
-  background: #f4f6f9;
-  transition: 0.3s;
+  font-family: Arial;
+  background: #f5f7fa;
+  padding: 15px;
 }
 
-.dark {
-  background: #1e1e1e;
-  color: white;
-}
-
-header {
-  background: linear-gradient(90deg,#4facfe,#00f2fe);
-  padding: 20px;
-  text-align: center;
-  color: white;
-  font-size: 26px;
-}
-
-.container {
-  display: flex;
-  max-width: 1200px;
-  margin: 20px auto;
-}
-
-.sidebar {
-  width: 250px;
+.card {
   background: white;
   padding: 15px;
-  border-radius: 10px;
-  margin-right: 20px;
+  border-radius: 15px;
+  margin-bottom: 10px;
 }
-
-.dark .sidebar { background:#2c2c2c; }
-
-.main { flex: 1; }
-
-.post {
-  background: white;
-  margin-bottom: 20px;
-  border-radius: 10px;
-  overflow: hidden;
-  cursor: pointer;
-  transition: 0.3s;
-}
-
-.dark .post { background:#2c2c2c; }
-
-.post:hover { transform: translateY(-5px); }
-
-.post img {
-  width: 100%;
-  height: 200px;
-  object-fit: cover;
-}
-
-.post-content { padding: 15px; }
-
-.post-title { font-size: 20px; font-weight: bold; }
-
-#viewer {
-  display: none;
-  background: white;
-  padding: 20px;
-  border-radius: 10px;
-}
-
-.dark #viewer { background:#2c2c2c; }
-
-iframe { width:100%; height:300px; }
 
 button {
-  padding: 8px 12px;
+  padding: 10px;
   border: none;
-  border-radius: 5px;
-  background: #4facfe;
-  color: white;
-  cursor: pointer;
-}
-
-input, textarea {
-  width: 100%;
-  padding: 8px;
-  margin: 5px 0;
-}
-
-.comment {
-  border-bottom: 1px solid #ccc;
-  padding: 5px;
-}
-
-#adminPanel {
-  display: none;
-  background: white;
-  padding: 15px;
-  margin-top: 20px;
   border-radius: 10px;
+  margin-top: 10px;
+}
+
+#start { background: green; color: white; }
+#claim { background: orange; color: white; }
+#withdraw { background: blue; color: white; }
+
+/* notification giả */
+#notify {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: black;
+  color: white;
+  padding: 10px;
+  font-size: 14px;
 }
 </style>
 </head>
 
 <body>
 
-<header>🚀 Blog Ultimate</header>
+<div id="notify">🏃 Chưa chạy</div>
 
-<div class="container">
-
-<div class="sidebar">
-  <button onclick="toggleDark()">🌙 Dark</button><br><br>
-  <button onclick="toggleAdmin()">🔐 Admin</button><br><br>
-  <input placeholder="🔍 Tìm kiếm..." oninput="searchPost(this.value)">
-  <p id="stats"></p>
+<div class="card">
+  💰 <b id="money">0</b> đ
+  <button id="withdraw">Rút tiền</button>
 </div>
 
-<div class="main">
-
-<div id="posts"></div>
-
-<div id="viewer">
-  <button onclick="back()">⬅ Quay lại</button>
-  <h2 id="title"></h2>
-  <p id="date"></p>
-  <p id="content"></p>
-  <div id="video"></div>
-
-  <p>❤️ <span id="likeCount"></span></p>
-  <button onclick="likePost()">Like</button>
-
-  <h3>Bình luận</h3>
-  <div id="comments"></div>
-  <input id="commentInput">
-  <button onclick="addComment()">Gửi</button>
+<div class="card">
+  📏 <b id="distance">0</b> m
 </div>
 
-<div id="adminPanel">
-  <h3>Thêm bài</h3>
-  <input id="titleInput" placeholder="Tiêu đề">
-  <textarea id="contentInput"></textarea>
-  <input id="imgInput" placeholder="Link ảnh">
-  <input id="videoInput" placeholder="YouTube">
-  <button onclick="addPost()">Đăng</button>
+<button id="start">Bắt đầu chạy</button>
+<button id="claim" disabled>Nhận thưởng</button>
 
-  <h3>Quản lý</h3>
-  <div id="adminList"></div>
+<!-- ADS -->
+<div id="adBox" style="display:none;" class="card">
+  📺 Quảng cáo: <span id="adTime">5</span>s  
+  <br>
+  <button onclick="skipAd()">Bỏ qua</button>
 </div>
 
-</div>
+<!-- WITHDRAW -->
+<div id="withdrawBox" style="display:none;" class="card">
+  <select id="wallet">
+    <option>Momo</option>
+    <option>ZaloPay</option>
+    <option>Bank</option>
+  </select>
+
+  <br><br>
+  <input id="amount" placeholder="20000 - 50000" type="number"/>
+
+  <button onclick="submitWithdraw()">Xác nhận</button>
 </div>
 
 <script>
-let posts = JSON.parse(localStorage.getItem("posts")) || [];
-let current = 0;
+// ===== STATE =====
+let distance = 0;
+let lastPos = null;
+let canClaim = false;
+let adsToday = parseInt(localStorage.getItem("ads") || 0);
+let money = parseInt(localStorage.getItem("money") || 0);
 
-// RENDER
-function render(list = posts){
-  postsDiv.innerHTML="";
-  list.forEach((p,i)=>{
-    postsDiv.innerHTML += `
-      <div class="post" onclick="view(${i})">
-        <img src="${p.img || 'https://via.placeholder.com/800'}">
-        <div class="post-content">
-          <div class="post-title">${p.title}</div>
-          <small>${p.date || ""}</small>
-        </div>
-      </div>
-    `;
-  });
-
-  stats.innerText="Bài viết: "+posts.length;
-  renderAdmin();
+// ===== UI =====
+function updateUI() {
+  document.getElementById("distance").innerText = Math.floor(distance);
+  document.getElementById("money").innerText = money;
 }
 
-// VIEW
-function view(i){
-  current=i;
-  postsDiv.style.display="none";
-  viewer.style.display="block";
+updateUI();
 
-  let p=posts[i];
-  title.innerText=p.title;
-  content.innerText=p.content;
-  date.innerText=p.date;
-  likeCount.innerText=p.likes||0;
+// ===== GPS =====
+function startRun() {
+  navigator.geolocation.watchPosition(pos => {
+    let lat = pos.coords.latitude;
+    let lon = pos.coords.longitude;
 
-  renderComments();
+    if (lastPos) {
+      let d = calcDistance(lastPos.lat, lastPos.lon, lat, lon);
+      distance += d;
+    }
 
-  if(p.video){
-  video.innerHTML = `
-    <video controls width="100%" style="border-radius:10px;">
-      <source src="${p.video}" type="video/mp4">
-      Trình duyệt không hỗ trợ video.
-    </video>
-  `;
-} else {
-  video.innerHTML = "";
-}
+    lastPos = {lat, lon};
 
-// BACK
-function back(){
-  postsDiv.style.display="block";
-  viewer.style.display="none";
-}
+    document.getElementById("notify").innerText =
+      "🏃 Đang chạy: " + Math.floor(distance) + " m";
 
-// ADD
-function addPost(){
-  posts.push({
-    title:titleInput.value,
-    content:contentInput.value,
-    img:imgInput.value,
-    video:videoInput.value,
-    date:new Date().toLocaleDateString(),
-    likes:0,
-    comments:[]
-  });
+    if (distance >= 1000 && !canClaim) {
+      canClaim = true;
+      document.getElementById("claim").disabled = false;
+      alert("🎉 Đủ 1km!");
+    }
 
-  localStorage.setItem("posts",JSON.stringify(posts));
-  render();
-}
+    updateUI();
 
-// DELETE
-function deletePost(i){
-  posts.splice(i,1);
-  localStorage.setItem("posts",JSON.stringify(posts));
-  render();
-}
-
-// ADMIN LIST
-function renderAdmin(){
-  adminList.innerHTML="";
-  posts.forEach((p,i)=>{
-    adminList.innerHTML += `${p.title} <button onclick="deletePost(${i})">Xóa</button><br>`;
+  }, err => {
+    alert("Bật GPS lên!");
   });
 }
 
-// SEARCH
-function searchPost(k){
-  let r=posts.filter(p=>p.title.toLowerCase().includes(k.toLowerCase()));
-  render(r);
+// ===== DISTANCE =====
+function calcDistance(lat1, lon1, lat2, lon2) {
+  let R = 6371000;
+  let dLat = (lat2-lat1) * Math.PI/180;
+  let dLon = (lon2-lon1) * Math.PI/180;
+
+  let a = Math.sin(dLat/2)**2 +
+          Math.cos(lat1*Math.PI/180) *
+          Math.cos(lat2*Math.PI/180) *
+          Math.sin(dLon/2)**2;
+
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-// LIKE
-function likePost(){
-  posts[current].likes++;
-  localStorage.setItem("posts",JSON.stringify(posts));
-  view(current);
+// ===== START =====
+document.getElementById("start").onclick = startRun;
+
+// ===== CLAIM =====
+document.getElementById("claim").onclick = () => {
+  if (adsToday >= 20) {
+    alert("Hết ads hôm nay");
+    return;
+  }
+
+  showAd();
+};
+
+// ===== ADS =====
+function showAd() {
+  let box = document.getElementById("adBox");
+  let time = 5;
+
+  box.style.display = "block";
+  document.getElementById("adTime").innerText = time;
+
+  let t = setInterval(() => {
+    time--;
+    document.getElementById("adTime").innerText = time;
+
+    if (time <= 0) {
+      clearInterval(t);
+      box.style.display = "none";
+      reward(true);
+    }
+  }, 1000);
 }
 
-// COMMENT
-function addComment(){
-  if(!commentInput.value) return;
-  posts[current].comments.push(commentInput.value);
-  commentInput.value="";
-  localStorage.setItem("posts",JSON.stringify(posts));
-  renderComments();
+function skipAd() {
+  document.getElementById("adBox").style.display = "none";
+  alert("Không có thưởng");
 }
 
-function renderComments(){
-  comments.innerHTML="";
-  posts[current].comments.forEach(c=>{
-    comments.innerHTML+=`<div class="comment">${c}</div>`;
-  });
+// ===== REWARD =====
+function reward(ok) {
+  if (!ok) return;
+
+  money += 100;
+  adsToday++;
+
+  localStorage.setItem("money", money);
+  localStorage.setItem("ads", adsToday);
+
+  distance = 0;
+  canClaim = false;
+
+  document.getElementById("claim").disabled = true;
+
+  alert("+100đ");
+  updateUI();
 }
 
-// DARK
-function toggleDark(){
-  document.body.classList.toggle("dark");
-}
+// ===== WITHDRAW =====
+document.getElementById("withdraw").onclick = () => {
+  document.getElementById("withdrawBox").style.display = "block";
+};
 
-// ADMIN
-function toggleAdmin(){
-  let pass=prompt("Pass:");
-  if(pass==="123") adminPanel.style.display="block";
-}
+function submitWithdraw() {
+  let amount = parseInt(document.getElementById("amount").value);
 
-// INIT
-const postsDiv=document.getElementById("posts");
-render();
+  if (amount < 20000 || amount > 50000) {
+    alert("20k - 50k");
+    return;
+  }
+
+  if (money < amount) {
+    alert("Không đủ tiền");
+    return;
+  }
+
+  money -= amount;
+  localStorage.setItem("money", money);
+
+  alert("Đã gửi yêu cầu tới admin");
+
+  document.getElementById("withdrawBox").style.display = "none";
+  updateUI();
+}
 </script>
 
 </body>
-  </html>
+</html>
